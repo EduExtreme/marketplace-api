@@ -34,7 +34,7 @@ export const enUS: Record<keyof typeof ptBR, string> = {
   "detail.copyKey": "Copy key",
   "detail.keyCopied": "Key copied to clipboard.",
 
-  "footer.note": "Demo catalog — sample data, no payment integration yet.",
+  "footer.note": "Payments securely processed by Stripe. Monthly subscription, cancel anytime.",
 
   "header.login": "Log in",
   "header.signup": "Sign up",

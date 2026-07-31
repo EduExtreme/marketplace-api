@@ -32,7 +32,7 @@ export const ptBR = {
   "detail.copyKey": "Copiar chave",
   "detail.keyCopied": "Chave copiada para a área de transferência.",
 
-  "footer.note": "Catálogo de demonstração — dados fictícios, sem integração de pagamento ainda.",
+  "footer.note": "Pagamentos processados com segurança pelo Stripe. Assinatura mensal, cancele quando quiser.",
 
   "header.login": "Entrar",
   "header.signup": "Criar conta",

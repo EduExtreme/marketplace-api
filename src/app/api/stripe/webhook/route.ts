@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
+import { grantLeadsCreditsFromCheckout, grantMonthlyLeadsCredits } from "@/lib/leads/credits";
 import { stripe } from "@/lib/stripe/client";
 import { fulfillOrder, markOrderFailed, revokeSubscriptionAccess, syncSubscriptionState } from "@/lib/stripe/fulfill";
+
+async function fulfillCheckoutSession(session: Stripe.Checkout.Session): Promise<void> {
+  if (session.metadata?.leadsCreditsQuantity) {
+    await grantLeadsCreditsFromCheckout(session);
+    return;
+  }
+  await fulfillOrder(session);
+}
 
 export async function POST(request: Request): Promise<NextResponse> {
   const rawBody = await request.text();
@@ -24,12 +33,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     case "checkout.session.completed": {
       const session = event.data.object;
       if (session.payment_status === "paid") {
-        await fulfillOrder(session);
+        await fulfillCheckoutSession(session);
       }
       break;
     }
     case "checkout.session.async_payment_succeeded": {
-      await fulfillOrder(event.data.object);
+      await fulfillCheckoutSession(event.data.object);
       break;
     }
     case "checkout.session.async_payment_failed": {
@@ -42,6 +51,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
     case "customer.subscription.updated": {
       await syncSubscriptionState(event.data.object);
+      break;
+    }
+    case "invoice.paid": {
+      await grantMonthlyLeadsCredits(event.data.object);
       break;
     }
     default:

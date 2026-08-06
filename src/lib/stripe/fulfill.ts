@@ -5,6 +5,8 @@ import type Stripe from "stripe";
 import { db } from "@/lib/db/client";
 import { purchases, unlockedApiKeys } from "@/lib/db/schema";
 import { generateApiKey } from "@/lib/api-keys";
+import { LEADS_PRODUCT_ID } from "@/lib/leads/constants";
+import { grantInitialLeadsCredits } from "@/lib/leads/credits";
 import { stripe } from "@/lib/stripe/client";
 
 const REVOKED_SUBSCRIPTION_STATUSES: Stripe.Subscription.Status[] = ["canceled", "unpaid", "incomplete_expired"];
@@ -49,6 +51,11 @@ export async function fulfillOrder(session: Stripe.Checkout.Session): Promise<vo
       updatedAt: new Date(),
     })
     .where(eq(purchases.id, purchase.id));
+
+  if (purchase.apiProviderId === LEADS_PRODUCT_ID) {
+    await grantInitialLeadsCredits(purchase.userId);
+    return;
+  }
 
   const [existingKey] = await db
     .select({ id: unlockedApiKeys.id })

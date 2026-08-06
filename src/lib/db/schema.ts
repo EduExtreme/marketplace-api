@@ -1,6 +1,7 @@
 import {
   boolean,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -29,6 +30,15 @@ export const apiCategoryId = pgEnum("api_category_id", [
 ]);
 
 export const httpMethod = pgEnum("http_method", ["GET", "POST", "PUT", "PATCH", "DELETE"]);
+
+export const creditTransactionType = pgEnum("credit_transaction_type", [
+  "subscription_grant",
+  "purchase",
+  "search_debit",
+  "refund",
+]);
+
+export const leadSearchStatus = pgEnum("lead_search_status", ["pending", "completed", "failed"]);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -120,6 +130,47 @@ export const providerCredentials = pgTable("provider_credentials", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Geração de Leads: busca no Google Maps via Apify, paga com créditos (ledger).
+export const leadSearches = pgTable("lead_searches", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  query: text("query").notNull(),
+  location: text("location").notNull(),
+  maxResults: integer("max_results").notNull().default(50),
+  status: leadSearchStatus("status").notNull().default("pending"),
+  apifyRunId: text("apify_run_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const leads = pgTable("leads", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  searchId: uuid("search_id")
+    .notNull()
+    .references(() => leadSearches.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  phone: text("phone"),
+  address: text("address"),
+  category: text("category"),
+  rawData: jsonb("raw_data"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Ledger de créditos: o saldo é sempre a SOMA desta tabela, nunca um campo solto.
+export const creditTransactions = pgTable("credit_transactions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  amount: integer("amount").notNull(),
+  type: creditTransactionType("type").notNull(),
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  stripeInvoiceId: text("stripe_invoice_id"),
+  searchId: uuid("search_id").references(() => leadSearches.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Session = typeof sessions.$inferSelect;
@@ -133,3 +184,9 @@ export type ApiProviderRecord = typeof apiProviders.$inferSelect;
 export type NewApiProviderRecord = typeof apiProviders.$inferInsert;
 export type ApiEndpointRecord = typeof apiEndpoints.$inferSelect;
 export type NewApiEndpointRecord = typeof apiEndpoints.$inferInsert;
+export type LeadSearch = typeof leadSearches.$inferSelect;
+export type NewLeadSearch = typeof leadSearches.$inferInsert;
+export type Lead = typeof leads.$inferSelect;
+export type NewLead = typeof leads.$inferInsert;
+export type CreditTransaction = typeof creditTransactions.$inferSelect;
+export type NewCreditTransaction = typeof creditTransactions.$inferInsert;

@@ -27,6 +27,9 @@ export function SiteHeaderClient({ user }: SiteHeaderClientProps) {
               <Link href="/account" className="text-foreground hover:text-primary">
                 {translate({ id: "header.account" })}
               </Link>
+              <Link href="/account/leads" className="text-foreground hover:text-primary">
+                {translate({ id: "header.leads" })}
+              </Link>
               {user.role === "admin" && (
                 <Link href="/account/admin" className="text-foreground hover:text-primary">
                   {translate({ id: "header.admin" })}

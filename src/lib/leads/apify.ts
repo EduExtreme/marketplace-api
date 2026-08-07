@@ -1,22 +1,29 @@
 import "server-only";
 
-import { ApifyClient } from "apify-client";
-import { APIFY_ACTOR_ID, MAX_RESULTS_PER_SEARCH } from "@/lib/leads/constants";
+import { ApifyApiError, ApifyClient } from "apify-client";
+import { APIFY_ACTOR_ID } from "@/lib/leads/constants";
+import type { GoogleMapsPlaceItem } from "@/lib/leads/types";
 
-const apifyToken = process.env.APIFY_TOKEN;
+function loadApifyTokens(): string[] {
+  const raw = process.env.APIFY_TOKENS ?? process.env.APIFY_TOKEN;
+  const tokens = raw
+    ?.split(",")
+    .map((token) => token.trim())
+    .filter(Boolean);
 
-if (!apifyToken) {
-  throw new Error("APIFY_TOKEN is not set");
+  if (!tokens || tokens.length === 0) {
+    throw new Error("APIFY_TOKENS (or APIFY_TOKEN) is not set");
+  }
+  return tokens;
 }
 
-const apify = new ApifyClient({ token: apifyToken });
+const apifyClients = loadApifyTokens().map((token) => new ApifyClient({ token }));
 
-interface GoogleMapsPlaceItem {
-  title?: string;
-  name?: string;
-  phone?: string;
-  address?: string;
-  categoryName?: string;
+// Índice do último token que funcionou — evita sempre começar pela chave já esgotada.
+let activeClientIndex = 0;
+
+function isOutOfUsageError(error: unknown): boolean {
+  return error instanceof ApifyApiError && error.type === "not-enough-usage-to-run-paid-actor";
 }
 
 export interface GoogleMapsSearchResult {
@@ -24,16 +31,38 @@ export interface GoogleMapsSearchResult {
   places: GoogleMapsPlaceItem[];
 }
 
-export async function runGoogleMapsSearch(query: string, location: string): Promise<GoogleMapsSearchResult> {
-  const run = await apify.actor(APIFY_ACTOR_ID).call({
-    searchStringsArray: [query],
-    locationQuery: location,
-    maxCrawledPlacesPerSearch: MAX_RESULTS_PER_SEARCH,
-  });
+export async function runGoogleMapsSearch(
+  query: string,
+  location: string,
+  maxResults: number,
+): Promise<GoogleMapsSearchResult> {
+  let lastError: unknown;
 
-  // maxCrawledPlaces não é um limite estrito no Actor — já vimos runs retornarem
-  // muito mais do que isso. Aplicamos o teto aqui, na leitura do dataset.
-  const { items } = await apify.dataset(run.defaultDatasetId).listItems({ limit: MAX_RESULTS_PER_SEARCH });
+  for (let attempt = 0; attempt < apifyClients.length; attempt++) {
+    const clientIndex = (activeClientIndex + attempt) % apifyClients.length;
+    const client = apifyClients[clientIndex];
 
-  return { runId: run.id, places: items as unknown as GoogleMapsPlaceItem[] };
+    try {
+      const run = await client.actor(APIFY_ACTOR_ID).call({
+        searchStringsArray: [query],
+        locationQuery: location,
+        maxCrawledPlacesPerSearch: maxResults,
+      });
+
+      // maxCrawledPlaces não é um limite estrito no Actor — já vimos runs retornarem
+      // muito mais do que isso. Aplicamos o teto aqui, na leitura do dataset.
+      const { items } = await client.dataset(run.defaultDatasetId).listItems({ limit: maxResults });
+
+      activeClientIndex = clientIndex;
+      return { runId: run.id, places: items as unknown as GoogleMapsPlaceItem[] };
+    } catch (error) {
+      lastError = error;
+      if (!isOutOfUsageError(error)) {
+        throw error;
+      }
+      console.warn(`[leads] Apify token #${clientIndex + 1}/${apifyClients.length} sem saldo, tentando a próxima chave`);
+    }
+  }
+
+  throw lastError;
 }

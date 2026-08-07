@@ -15,6 +15,18 @@ export async function getCreditBalance(userId: string): Promise<number> {
   return result?.balance ?? 0;
 }
 
+// true se o usuário já comprou crédito avulso (type "purchase") alguma vez — usado
+// para liberar um teto maior de resultados por busca (ver MAX_RESULTS_PER_SEARCH_EXTENDED).
+export async function hasPurchasedCredits(userId: string): Promise<boolean> {
+  const [result] = await db
+    .select({ id: creditTransactions.id })
+    .from(creditTransactions)
+    .where(and(eq(creditTransactions.userId, userId), eq(creditTransactions.type, "purchase")))
+    .limit(1);
+
+  return result !== undefined;
+}
+
 export async function grantInitialLeadsCredits(userId: string): Promise<void> {
   await db.insert(creditTransactions).values({
     userId,

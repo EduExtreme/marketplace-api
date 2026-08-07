@@ -7,8 +7,8 @@ import { db } from "@/lib/db/client";
 import { leadSearches, leads } from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { runGoogleMapsSearch } from "@/lib/leads/apify";
-import { MAX_RESULTS_PER_SEARCH } from "@/lib/leads/constants";
-import { debitSearchCredit, getCreditBalance } from "@/lib/leads/credits";
+import { MAX_RESULTS_PER_SEARCH, MAX_RESULTS_PER_SEARCH_EXTENDED } from "@/lib/leads/constants";
+import { debitSearchCredit, getCreditBalance, hasPurchasedCredits } from "@/lib/leads/credits";
 import { LEADS_ERROR_CODES, type LeadSearchActionState } from "@/lib/leads/errors";
 
 const searchSchema = z.object({
@@ -35,18 +35,25 @@ export async function runLeadSearch(
 
   const { query, location } = parsed.data;
 
-  const balance = await getCreditBalance(user.id);
-  if (balance < 1) {
-    return { errorCode: LEADS_ERROR_CODES.insufficientCredits };
+  const isAdmin = user.role === "admin";
+  if (!isAdmin) {
+    const balance = await getCreditBalance(user.id);
+    if (balance < 1) {
+      return { errorCode: LEADS_ERROR_CODES.insufficientCredits };
+    }
   }
+
+  // Quem já comprou crédito avulso (além da cota da assinatura) recebe buscas maiores.
+  const maxResults =
+    isAdmin || (await hasPurchasedCredits(user.id)) ? MAX_RESULTS_PER_SEARCH_EXTENDED : MAX_RESULTS_PER_SEARCH;
 
   const [search] = await db
     .insert(leadSearches)
-    .values({ userId: user.id, query, location, maxResults: MAX_RESULTS_PER_SEARCH, status: "pending" })
+    .values({ userId: user.id, query, location, maxResults, status: "pending" })
     .returning({ id: leadSearches.id });
 
   try {
-    const { runId, places } = await runGoogleMapsSearch(query, location);
+    const { runId, places } = await runGoogleMapsSearch(query, location, maxResults);
 
     const insertedLeads = places.length
       ? await db
@@ -67,17 +74,21 @@ export async function runLeadSearch(
             phone: leads.phone,
             address: leads.address,
             category: leads.category,
+            rawData: leads.rawData,
           })
       : [];
 
     // Só debita crédito depois que o Apify retornou com sucesso.
     await db.update(leadSearches).set({ status: "completed", apifyRunId: runId }).where(eq(leadSearches.id, search.id));
-    await debitSearchCredit(user.id, search.id);
+    if (!isAdmin) {
+      await debitSearchCredit(user.id, search.id);
+    }
 
     revalidatePath("/account/leads");
 
     return { errorCode: null, query, location, results: insertedLeads };
-  } catch {
+  } catch (error) {
+    console.error("[leads] search failed", error);
     await db.update(leadSearches).set({ status: "failed" }).where(eq(leadSearches.id, search.id));
     return { errorCode: LEADS_ERROR_CODES.searchFailed };
   }

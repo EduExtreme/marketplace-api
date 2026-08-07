@@ -9,6 +9,7 @@ import {
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
+import type { GoogleMapsPlaceItem } from "@/lib/leads/types";
 
 export const purchaseStatus = pgEnum("purchase_status", [
   "pending",
@@ -39,6 +40,13 @@ export const creditTransactionType = pgEnum("credit_transaction_type", [
 ]);
 
 export const leadSearchStatus = pgEnum("lead_search_status", ["pending", "completed", "failed"]);
+
+export const leadQualificationStatus = pgEnum("lead_qualification_status", [
+  "new",
+  "contacted",
+  "qualified",
+  "discarded",
+]);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -153,7 +161,8 @@ export const leads = pgTable("leads", {
   phone: text("phone"),
   address: text("address"),
   category: text("category"),
-  rawData: jsonb("raw_data"),
+  rawData: jsonb("raw_data").$type<GoogleMapsPlaceItem>(),
+  qualificationStatus: leadQualificationStatus("qualification_status").notNull().default("new"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

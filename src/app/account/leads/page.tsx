@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { getCreditBalance } from "@/lib/leads/credits";
-import { listRecentSearches } from "@/lib/leads/data";
 import { LeadsView } from "@/components/leads/leads-view";
 
 export const metadata: Metadata = {
@@ -11,14 +9,7 @@ export const metadata: Metadata = {
 
 export default async function LeadsPage() {
   const user = await getCurrentUser();
-  if (!user) {
-    redirect("/login");
-  }
+  const balance = user ? await getCreditBalance(user.id) : 0;
 
-  const [balance, recentSearches] = await Promise.all([
-    getCreditBalance(user.id),
-    listRecentSearches(user.id),
-  ]);
-
-  return <LeadsView balance={balance} recentSearches={recentSearches} />;
+  return <LeadsView balance={balance} unlimited={user?.role === "admin"} isLoggedIn={user !== null} />;
 }

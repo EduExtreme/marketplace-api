@@ -3,6 +3,7 @@ import { Space_Grotesk, JetBrains_Mono, Inter } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { SiteHeader } from "@/components/site-header";
+import { QueryProvider } from "@/components/providers/query-provider";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
@@ -53,11 +54,13 @@ export default async function RootLayout({
       className={`dark ${spaceGrotesk.variable} ${jetBrainsMono.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <TooltipProvider>
-          <SiteHeader />
-          {children}
-          <Toaster theme="dark" />
-        </TooltipProvider>
+        <QueryProvider>
+          <TooltipProvider>
+            <SiteHeader />
+            {children}
+            <Toaster theme="dark" />
+          </TooltipProvider>
+        </QueryProvider>
       </body>
     </html>
   );

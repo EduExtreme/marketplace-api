@@ -1,3 +1,5 @@
+import type { GoogleMapsPlaceItem } from "@/lib/leads/types";
+
 export const LEADS_ERROR_CODES = {
   unauthenticated: "unauthenticated",
   insufficientCredits: "insufficient_credits",
@@ -14,6 +16,7 @@ export interface LeadResultItem {
   phone: string | null;
   address: string | null;
   category: string | null;
+  rawData: GoogleMapsPlaceItem | null;
 }
 
 export interface LeadSearchActionState {

@@ -21,28 +21,31 @@ export function EndpointListEditor({ endpoints, onUpdate, onAdd, onRemove }: End
     <div className="flex flex-col gap-2">
       <Label>{translate({ id: "admin.catalog.endpointsLabel" })}</Label>
       {endpoints.map((endpoint, index) => (
-        <div key={index} className="flex items-center gap-2">
-          <select
-            value={endpoint.method}
-            onChange={(event) => onUpdate(index, { method: event.target.value as HttpMethod })}
-            className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm text-foreground sm:w-28"
-          >
-            {HTTP_METHODS.map((method) => (
-              <option key={method} value={method}>
-                {method}
-              </option>
-            ))}
-          </select>
-          <Input
-            value={endpoint.path}
-            onChange={(event) => onUpdate(index, { path: event.target.value })}
-            placeholder={translate({ id: "admin.catalog.endpointPathPlaceholder" })}
-            className="flex-1"
-          />
+        <div key={index} className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-2">
+            <select
+              value={endpoint.method}
+              onChange={(event) => onUpdate(index, { method: event.target.value as HttpMethod })}
+              className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm text-foreground sm:w-28"
+            >
+              {HTTP_METHODS.map((method) => (
+                <option key={method} value={method}>
+                  {method}
+                </option>
+              ))}
+            </select>
+            <Input
+              value={endpoint.path}
+              onChange={(event) => onUpdate(index, { path: event.target.value })}
+              placeholder={translate({ id: "admin.catalog.endpointPathPlaceholder" })}
+              className="flex-1"
+            />
+          </div>
           <Button
             type="button"
             variant="secondary"
             size="sm"
+            className="self-start sm:self-auto"
             disabled={endpoints.length === 1}
             onClick={() => onRemove(index)}
           >

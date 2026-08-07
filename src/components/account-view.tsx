@@ -29,7 +29,7 @@ export function AccountView({ email, unlockedProviders }: AccountViewProps) {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-6 py-16">
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 py-10 sm:px-6 sm:py-16">
       <div>
         <h1 className="font-display text-2xl font-semibold text-foreground">
           {translate({ id: "account.title" })}
@@ -48,17 +48,17 @@ export function AccountView({ email, unlockedProviders }: AccountViewProps) {
           <div className="flex flex-col gap-4">
             {unlockedProviders.map(({ provider, apiKey, cancelAtPeriodEnd, currentPeriodEnd }) => (
               <TerminalWindow key={provider.id} title={`${provider.id}.api`}>
-                <div className="flex items-center justify-between gap-3">
-                  <div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
                     <p className="font-display text-sm font-semibold text-foreground">{provider.name}</p>
-                    <p className="mt-1 font-mono text-xs text-muted-foreground">{apiKey}</p>
+                    <p className="mt-1 break-all font-mono text-xs text-muted-foreground">{apiKey}</p>
                   </div>
-                  <Button variant="secondary" size="sm" onClick={() => handleCopy(apiKey)}>
+                  <Button variant="secondary" size="sm" className="self-start sm:self-auto" onClick={() => handleCopy(apiKey)}>
                     {translate({ id: "detail.copyKey" })}
                   </Button>
                 </div>
 
-                <div className="mt-3 flex items-center justify-between gap-3 border-t border-border/60 pt-3">
+                <div className="mt-3 flex flex-col items-start gap-2 border-t border-border/60 pt-3 sm:flex-row sm:items-center sm:justify-between">
                   {cancelAtPeriodEnd ? (
                     <p className="font-mono text-xs text-amber-400">
                       {currentPeriodEnd

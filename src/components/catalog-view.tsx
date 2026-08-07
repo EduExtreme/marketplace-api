@@ -23,7 +23,7 @@ export function CatalogView({ isLoggedIn, unlocks, providers }: CatalogViewProps
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-10 px-6 py-16">
+    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-4 py-10 sm:px-6 sm:py-16">
       <TerminalWindow title="hub — marketplace">
         <p className="font-mono text-xs text-primary">
           {translate({ id: "hero.badge" })}
@@ -41,7 +41,7 @@ export function CatalogView({ isLoggedIn, unlocks, providers }: CatalogViewProps
         <h2 className="font-display text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           {translate({ id: "catalog.title" })}
         </h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {providers.map((provider) => (
             <ApiCard
               key={provider.id}
